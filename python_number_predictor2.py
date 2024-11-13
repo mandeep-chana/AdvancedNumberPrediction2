@@ -2,19 +2,15 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import LSTM, Dense, Dropout, Input, Bidirectional, BatchNormalization, Add
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Input, Bidirectional, BatchNormalization, Add, Concatenate, Conv1D
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, ExtraTreesRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error
-from scipy import stats
-import optuna
 import os
 from datetime import datetime
 import warnings
-import matplotlib.pyplot as plt
 
 # Suppress warnings and set random seeds for reproducibility
 warnings.filterwarnings('ignore')
@@ -28,15 +24,11 @@ plots_dir = "analysis_plots"
 for directory in [log_dir, model_dir, plots_dir]:
     os.makedirs(directory, exist_ok=True)
 
-
 class AdvancedNumberPredictor:
-    def __init__(self, sequence_length=15):
+    def __init__(self, sequence_length=8965):
         self.sequence_length = sequence_length
         self.scaler = StandardScaler()
         self.lstm_model = None
-        self.rf_model = None
-        self.gb_model = None
-        self.et_model = None
 
     def preprocess_data(self, data):
         # Convert data to numpy array and remove outliers
@@ -67,17 +59,29 @@ class AdvancedNumberPredictor:
 
     def build_lstm_model(self, input_shape):
         inputs = Input(shape=input_shape)
-        x = Bidirectional(LSTM(64, return_sequences=True))(inputs)
-        x = BatchNormalization()(x)
-        x = Dropout(0.3)(x)
 
-        # Residual connection with shape alignment
-        residual = x
-        x = Bidirectional(LSTM(32, return_sequences=True))(x)
-        x = Dense(128)(x)  # Align x shape to residual (128) before adding
-        x = Add()([x, residual])  # Now x and residual have compatible shapes
+        # Convolutional layer for feature extraction
+        conv = Conv1D(filters=32, kernel_size=3, activation='relu')(inputs)
+        conv = BatchNormalization()(conv)
 
-        x = Bidirectional(LSTM(16))(x)
+        # Stacked LSTM layers with attention mechanism
+        lstm1 = Bidirectional(LSTM(2048, return_sequences=True))(conv)
+        lstm1 = BatchNormalization()(lstm1)
+        lstm1 = Dropout(0.3)(lstm1)
+
+        lstm2 = Bidirectional(LSTM(1024, return_sequences=True))(lstm1)
+        lstm2 = BatchNormalization()(lstm2)
+        lstm2 = Dropout(0.3)(lstm2)
+
+        lstm3 = Bidirectional(LSTM(256, return_sequences=True))(lstm2)
+        lstm3 = BatchNormalization()(lstm3)
+        lstm3 = Dropout(0.3)(lstm3)
+
+
+        attention = Dense(1, activation='sigmoid')(lstm3)
+        attended_lstm = Concatenate()([lstm2, attention])
+
+        x = Bidirectional(LSTM(16))(attended_lstm)
         x = BatchNormalization()(x)
         x = Dense(64, activation='relu')(x)
         x = Dropout(0.3)(x)
@@ -101,7 +105,7 @@ class AdvancedNumberPredictor:
         early_stopping = EarlyStopping(patience=10, restore_best_weights=True)
 
         self.lstm_model.fit(
-            X_train, y_train, epochs=5, batch_size=64, validation_split=0.2,
+            X_train, y_train, epochs=2, batch_size=64, validation_split=0.2,
             callbacks=[early_stopping, checkpoint], verbose=1
         )
 
@@ -131,7 +135,6 @@ class AdvancedNumberPredictor:
             last_sequence = np.append(last_sequence[1:], pred)
         return predictions
 
-
 def main():
     data = pd.read_csv('data.txt', sep='\t', header=None).values.flatten()
     predictor = AdvancedNumberPredictor(sequence_length=15)
@@ -146,7 +149,7 @@ def main():
     predictor.fit(X, y)
 
     last_sequence = cleaned_data[-predictor.sequence_length:]
-    
+
     # Generate the predictions
     predictions = predictor.predict_next_numbers(last_sequence)
 
@@ -155,7 +158,6 @@ def main():
 
     print("\n=== Final Predictions ===")
     print("Next 5 numbers:", rounded_predictions)
-
 
 if __name__ == "__main__":
     main()
