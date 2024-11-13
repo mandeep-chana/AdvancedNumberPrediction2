@@ -93,3 +93,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgements
 - [TensorFlow Documentation](https://www.tensorflow.org/api_docs)
 - [Keras Documentation](https://keras.io/api/)
+
+## Disclaimer
+This tool is for educational and research purposes only. 
+
+
