@@ -116,8 +116,11 @@ class AdvancedNumberPredictor:
         print(f"LSTM Model - MAE: {mae:.4f}, MSE: {mse:.4f}")
 
     def predict_next_numbers(self, last_sequence, num_predictions=5):
-        predictions = []
-        for _ in range(num_predictions):
+        predictions = set()  # Use a set to store unique predictions
+        attempts = 0
+        max_attempts = 50  # Maximum number of attempts to get unique numbers
+
+        while len(predictions) < num_predictions and attempts < max_attempts:
             # Prepare input sequence
             seq_features = [
                 np.mean(last_sequence), np.std(last_sequence), np.min(last_sequence), np.max(last_sequence),
@@ -130,34 +133,50 @@ class AdvancedNumberPredictor:
             full_sequence = full_sequence.reshape((1, full_sequence.shape[1], 1))
 
             # Predict the next number
-            pred = self.lstm_model.predict(full_sequence)[0, 0]
-            predictions.append(pred)
-            last_sequence = np.append(last_sequence[1:], pred)
-        return predictions
+            pred = self.lstm_model.predict(full_sequence, verbose=0)[0, 0]
+            rounded_pred = int(round(np.clip(pred, 1, 50)))  # Ensure prediction is between 1 and 50
+
+            # Add prediction if it's unique
+            if rounded_pred not in predictions:
+                predictions.add(rounded_pred)
+                last_sequence = np.append(last_sequence[1:], pred)
+
+            attempts += 1
+
+        # If we don't have enough unique predictions, fill remaining slots
+        while len(predictions) < num_predictions:
+            new_num = np.random.randint(1, 51)  # Generate random number between 1 and 50
+            if new_num not in predictions:
+                predictions.add(new_num)
+
+        # Convert set to sorted list
+        return sorted(list(predictions))
+
 
 def main():
-    data = pd.read_csv('data.txt', sep='\t', header=None).values.flatten()
-    predictor = AdvancedNumberPredictor(sequence_length=15)
+    try:
+        # Read data more flexibly by handling both tabs and spaces
+        data = pd.read_csv('data.txt', sep='\s+', header=None, dtype=float).values.flatten()
 
-    cleaned_data = predictor.preprocess_data(data)
-    X, y = predictor.create_sequences(cleaned_data)
+        predictor = AdvancedNumberPredictor(sequence_length=15)
+        cleaned_data = predictor.preprocess_data(data)
+        X, y = predictor.create_sequences(cleaned_data)
 
-    if len(X) == 0 or len(y) == 0:
-        print("Error: No valid sequences could be created from the data.")
-        return
+        if len(X) == 0 or len(y) == 0:
+            print("Error: No valid sequences could be created from the data.")
+            return
 
-    predictor.fit(X, y)
+        predictor.fit(X, y)
+        last_sequence = cleaned_data[-predictor.sequence_length:]
 
-    last_sequence = cleaned_data[-predictor.sequence_length:]
+        # Get unique predictions
+        predictions = predictor.predict_next_numbers(last_sequence)
 
-    # Generate the predictions
-    predictions = predictor.predict_next_numbers(last_sequence)
+        print("\n=== Final Predictions ===")
+        print("Next 5 numbers:", predictions)
 
-    # Round each prediction to the nearest whole number
-    rounded_predictions = [round(num) for num in predictions]
-
-    print("\n=== Final Predictions ===")
-    print("Next 5 numbers:", rounded_predictions)
+    except Exception as e:
+        print(f"Error processing data: {str(e)}")
 
 if __name__ == "__main__":
     main()
