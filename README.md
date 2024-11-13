@@ -1,49 +1,95 @@
-# AdvancedNumberPredictor
 
-`AdvancedNumberPredictor` is a machine learning-based tool for predicting sequential numeric patterns. The project uses a combination of LSTM neural networks and ensemble machine learning models to forecast future numbers based on historical sequences. It also employs various preprocessing techniques, feature engineering, and hyperparameter optimization to improve prediction accuracy.
+# Bidirectional LSTM Model with Convolutional Layer
 
-## Features
-- **Data Preprocessing**: Removes outliers and scales data to enhance model accuracy.
-- **Feature Engineering**: Extracts statistical features from sequences (e.g., mean, standard deviation, skewness) to improve model performance.
-- **Ensemble Modeling**: Utilizes Random Forest, Gradient Boosting, and Extra Trees regressors, with hyperparameter optimization through Optuna.
-- **LSTM Neural Network**: A deep learning model for sequential data prediction, optimized with hyperparameter tuning.
-- **Prediction Refinement**: Post-processing ensures predictions are within valid bounds and align with recent trends.
-- **Logging and Model Saving**: Logs are saved, and best models are stored for future use.
+## Overview
+This project implements a neural network model using a combination of Convolutional and Bidirectional LSTM layers. It is designed for sequence modeling tasks, such as time series analysis, natural language processing (NLP), or speech recognition.
 
-## Requirements
-The project requires Python 3.x and the following packages:
-- `numpy`
-- `pandas`
-- `tensorflow`
-- `scikit-learn`
-- `optuna`
-- `matplotlib`
-- `scipy`
+### Key Features
+- **Bidirectional LSTM**: Uses forward and backward LSTM layers to capture information from both past and future time steps.
+- **Convolutional Layer Integration**: Incorporates a convolutional layer before the LSTM layer to extract features from the input sequence.
+- **Batch Normalization**: Stabilizes training and speeds up convergence.
+- **Dropout Regularization**: Reduces overfitting by randomly deactivating neurons during training.
 
-Install dependencies using:
+## Project Structure
+```
+├── model/
+│   ├── lstm_model.py         # Contains the main model definition
+├── data/
+│   └── sample_data.csv       # Example input data (if applicable)
+├── README.md                 # Project documentation
+├── requirements.txt          # List of dependencies
+└── LICENSE                   # License file (if applicable)
+```
+
+## Prerequisites
+- Python 3.8+
+- TensorFlow or Keras for neural network implementation
+
+## Installation
+Clone the repository and install the required dependencies:
+
 ```bash
+git https://github.com/mandeep-chana/AdvancedNumberPrediction2.git
+cd your-repo-name
 pip install -r requirements.txt
-Usage
-Prepare Data: Place your dataset as data.txt in the root directory. This file should contain numerical data in a single column format.
-Run the Script:
-bash
-Copy code
-python predictor.py
-Results:
-Predictions will be displayed in the console.
-A file named predictions.txt with predicted values will be created in the root directory.
-Plots and logs are saved in analysis_plots and ml_logs respectively.
-Example Prediction
-plaintext
-Copy code
-=== Final Predictions ===
-Next 5 numbers: [15, 32, 27, 4, 21]
-Directory Structure
-ml_logs/: Contains log files for model training and evaluation.
-saved_models/: Stores the best models during training.
-analysis_plots/: Saves plots generated during data analysis.
-Contributing
-Contributions are welcome! Please fork this repository, create a new branch, and submit a pull request.
+```
 
-License
-This project is licensed under the MIT License.
+## Usage
+The main model can be found in `lstm_model.py`. Below is an example of how to initialize and train the model:
+
+```python
+from model.lstm_model import build_model
+
+# Load your data
+X_train, y_train = load_data()
+
+# Build and compile the model
+model = build_model(input_shape=X_train.shape[1:])
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model
+model.fit(X_train, y_train, epochs=20, batch_size=32, validation_split=0.2)
+```
+
+## Model Architecture
+The neural network architecture includes:
+1. A convolutional layer for feature extraction.
+2. A Bidirectional LSTM layer with 460 units.
+3. Batch Normalization for stable training.
+4. Dropout layer with a dropout rate of 0.3.
+
+## Example Code
+The following snippet demonstrates the key components of the model:
+
+```python
+from tensorflow.keras.layers import Conv1D, Bidirectional, LSTM, BatchNormalization, Dropout, Dense
+from tensorflow.keras.models import Sequential
+
+def build_model(input_shape):
+    model = Sequential()
+    model.add(Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=input_shape))
+    model.add(Bidirectional(LSTM(460, return_sequences=True)))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.3))
+    model.add(Dense(10, activation='softmax'))  # Adjust output layer as needed
+    return model
+```
+
+## Hyperparameter Tuning
+- You can adjust the number of LSTM units (`LSTM(460)`) based on your hardware capacity and dataset size.
+- The `Dropout(0.3)` rate can be modified to control regularization.
+- `return_sequences=True` is set for stacking LSTM layers or sequence output.
+
+## Performance
+- The model's performance may vary based on the dataset used. It's recommended to experiment with different hyperparameters and preprocessing techniques.
+- Include a plot of model training accuracy and loss if applicable.
+
+## Contributing
+Contributions are welcome! Please fork the repository and create a pull request.
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+- [TensorFlow Documentation](https://www.tensorflow.org/api_docs)
+- [Keras Documentation](https://keras.io/api/)
