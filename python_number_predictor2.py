@@ -65,7 +65,7 @@ class AdvancedNumberPredictor:
         conv = BatchNormalization()(conv)
 
         # Stacked LSTM layers with attention mechanism
-        lstm1 = Bidirectional(LSTM(2048, return_sequences=True))(conv)
+        lstm1 = Bidirectional(LSTM(4092, return_sequences=True))(conv)
         lstm1 = BatchNormalization()(lstm1)
         lstm1 = Dropout(0.3)(lstm1)
 
@@ -105,7 +105,7 @@ class AdvancedNumberPredictor:
         early_stopping = EarlyStopping(patience=10, restore_best_weights=True)
 
         self.lstm_model.fit(
-            X_train, y_train, epochs=2, batch_size=64, validation_split=0.2,
+            X_train, y_train, epochs=10, batch_size=64, validation_split=0.2,
             callbacks=[early_stopping, checkpoint], verbose=1
         )
 
